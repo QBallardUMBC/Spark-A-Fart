@@ -1,0 +1,57 @@
+local OnJoin = game.ReplicatedStorage:WaitForChild("OnJoin") -- Remote Event
+local FartAnimations = require(game.ReplicatedStorage:WaitForChild("FartAnimations"))
+local DataStoreService = game:GetService("DataStoreService")
+local DataStore = DataStoreService:GetDataStore("MyDataStore")
+
+local function loadPlayerData(player)
+	local key = player.UserId
+
+	local success, data = pcall(function()
+		return DataStore:GetAsync(key)
+	end)
+
+	if success then
+		if data then
+			player.leaderstats.Farts.Value = data.Farts
+			player.FartStorage.FartAnimation.Value = data.FartAnimation
+			--print(player.FartStorage.FartAnimation.Value)
+		else
+			-- Set default values if no data is found
+			player.leaderstats.Farts.Value = 0
+			player.FartStorage.FartAnimation.Value = FartAnimations.BaseFart
+		end
+	else
+		warn("Failed to load data for player " .. player.Name .. ": " .. data)
+	end
+	--print(success)
+	--print(player.FartStorage.FartAnimation.Value)
+end
+
+game.Players.PlayerAdded:Connect(function(player) -- On Join FireClient
+	OnJoin:FireClient(player)
+	player:LoadCharacter()
+	
+	local leaderstats = Instance.new("Folder")
+	leaderstats.Name = "leaderstats"
+	leaderstats.Parent = player
+	local Farts = Instance.new("IntValue")
+	Farts.Name = "Farts"
+	Farts.Value = 0
+	Farts.Parent = leaderstats
+	local FartStorage = Instance.new("Folder", player)
+	FartStorage.Name = "FartStorage"
+	local FartAnimation = Instance.new("StringValue", FartStorage)
+	FartAnimation.Name = "FartAnimation"
+	local statusFolder = Instance.new("Folder", player)
+	statusFolder.Name = "StatusFolder"
+	local inArena = Instance.new("BoolValue", statusFolder)
+	inArena.Name = "inArena"
+	inArena.Value = false
+	local inShop = Instance.new("BoolValue", statusFolder)
+	inShop.Name = "inShop"
+	inShop.Value = false
+	loadPlayerData(player)
+	FartAnimation.Value = FartAnimations.BaseFart
+	print(player:WaitForChild("FartStorage"):WaitForChild("FartAnimation").Value)
+	--FartAnimation.Value = FartAnimations.BaseFart
+end)
