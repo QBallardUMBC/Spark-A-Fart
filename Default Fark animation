@@ -1,0 +1,135 @@
+local FartAnimations = require(game.ReplicatedStorage:WaitForChild("FartAnimations"))
+local FartAnimationDown = game.ReplicatedStorage:WaitForChild("FartAnimationDown")
+local FartAnimationUp = game.ReplicatedStorage:WaitForChild("FartAnimationUp")
+local runservice = game:GetService("RunService")
+local bubbly = game.ReplicatedStorage:WaitForChild("bubble sound")
+local farty = game.ReplicatedStorage:WaitForChild("FNaF 1 animatronic Groan")
+
+local playerConnections = {}
+
+local maxDamage = 40
+local damageTrackers = {}
+
+local function balldmg(hit, ballId, player)
+	if hit.Parent:FindFirstChild("Humanoid") and hit.Parent ~= player.Character then
+		local humanoid = hit.Parent:FindFirstChild("Humanoid")
+		local playerHealth = humanoid.Health
+		local currePlayerhealth = playerHealth
+		if playerHealth - currePlayerhealth == maxDamage then
+			return
+		else
+			humanoid:TakeDamage(1)
+			wait(1)
+			currePlayerhealth = humanoid.Health
+		end
+	end
+end
+
+local function hb(ball, hrp, mouselo, player)
+	local ball2 = ball:Clone()
+	ball2.Parent = game.Workspace
+	ball2.Position = hrp.Position
+	ball2.Anchored = false
+
+	local bodyVelocity = Instance.new("BodyVelocity", ball2)
+	local baseDirection = CFrame.new(hrp.Position, mouselo).LookVector
+
+	-- Add spread effect
+	local spreadAngle = math.rad(30) -- 30 degree spread in radians
+	local spreadX = math.random() * spreadAngle - spreadAngle / 2
+	local spreadY = math.random() * spreadAngle - spreadAngle / 2
+	local spreadZ = math.random() * spreadAngle - spreadAngle / 2
+
+	local spreadVector = baseDirection + Vector3.new(spreadX, spreadY, spreadZ)
+	spreadVector = spreadVector.Unit -- Normalize to maintain consistent speed
+
+	bodyVelocity.Velocity = spreadVector * 50 -- Adjust the speed as needed
+	bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+
+	local ballId = tostring(game:GetService("HttpService"):GenerateGUID(false))
+	ball2.Touched:Connect(function(hit) balldmg(hit, ballId, player) end)
+
+	wait(1.2)
+	ball2:Destroy()
+end
+
+local function onFartAnimationDown(player, FartAnimation)
+	if FartAnimation ~= FartAnimations.BaseFart then return end
+	print(FartAnimations.BaseFart)
+	print("Base Fired2")
+
+	local character = player.Character
+	local humanoid = character:FindFirstChild("Humanoid")
+	local animator = humanoid:FindFirstChild("Animator")
+	local animation = Instance.new("Animation")
+	animation.AnimationId = FartAnimations.BaseFart
+	local animationTrack = animator:LoadAnimation(animation)
+	animationTrack:Play()
+
+	local function AnchorCharacterParts(anchor)
+		for _, part in pairs(character:GetChildren()) do
+			if part:IsA("BasePart") then
+				part.Anchored = anchor
+			end
+		end
+	end
+
+	animationTrack:GetMarkerReachedSignal("Hold"):Connect(function()
+		animationTrack:AdjustSpeed(0)
+
+		local FartVFX = game.ReplicatedStorage:WaitForChild("Fart VFX"):WaitForChild("ParticleEmitter"):Clone()
+		local FartVFX2 = game.ReplicatedStorage:WaitForChild("Fart VFX"):WaitForChild("ParticleEmitter1"):Clone()
+		FartVFX.Parent = character.PrimaryPart
+		FartVFX2.Parent = character.PrimaryPart
+		bubbly:Play()
+		AnchorCharacterParts(true)
+
+		-- Ensure there's only one connection per player
+		if playerConnections[player] then
+			playerConnections[player]:Disconnect()
+		end
+		
+		playerConnections[player] = FartAnimationUp.OnServerEvent:Connect(function(plr, direction, mouselo, FartAnimation2)
+			if plr ~= player then return end
+			if FartAnimation2 ~= FartAnimations.BaseFart then return end
+
+			print(FartAnimation)
+			bubbly:Stop()
+			FartVFX:Destroy()
+			FartVFX2:Destroy()
+
+			local VFX = game.ReplicatedStorage:WaitForChild("VFX"):WaitForChild("Attachment"):WaitForChild("ParticleEmitter"):Clone()
+			VFX.Parent = character.PrimaryPart
+
+			local ball = game.ReplicatedStorage:WaitForChild("BaseFartHitbox"):Clone()
+			ball.Parent = game.Workspace
+
+			local hrp = character.PrimaryPart
+			local hbfnc = runservice.Heartbeat:Connect(function() hb(ball, hrp, mouselo, player) end)
+			
+			farty:Play()
+			
+			wait(2)
+			VFX.Enabled = false
+			hbfnc:Disconnect()
+			animationTrack:AdjustSpeed(1)
+			AnchorCharacterParts(false)
+			farty:Stop()
+			player:WaitForChild("leaderstats"):WaitForChild("Farts").Value += 1
+			
+			wait(2)
+			VFX:Destroy()
+			animationTrack.Stopped:Connect(function()
+				print("Animation finished!")
+				animationTrack:Stop()  -- Stops the animation
+				animationTrack:Destroy() -- Removes the AnimationTrack
+				animation:Destroy() -- Removes the Animation instance
+				local idleAnimation = humanoid:LoadAnimation(character.Humanoid:FindFirstChild("IdleAnimation"))
+				idleAnimation:Play()
+			end)
+
+		end)
+	end)
+end
+
+FartAnimationDown.OnServerEvent:Connect(onFartAnimationDown)
