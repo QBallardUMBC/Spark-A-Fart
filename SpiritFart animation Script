@@ -1,0 +1,168 @@
+local FartAnimations = require(game.ReplicatedStorage:WaitForChild("FartAnimations"))
+local FartAnimationDown = game.ReplicatedStorage:WaitForChild("FartAnimationDown")
+local FartAnimationUp = game.ReplicatedStorage:WaitForChild("FartAnimationUp")
+local TS = game:GetService("TweenService")
+
+local TI = TweenInfo.new(.3, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, 0)
+local TI2 = TweenInfo.new(1.5, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, 0)
+local TI3 = TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, 0)
+local activeCharges = {}
+
+FartAnimationDown.OnServerEvent:Connect(function(player, FartAnimation)
+	if FartAnimation ~= FartAnimations.SpiritFart then return end
+	print("SpiritFired")
+	local character = player.Character
+	local hrp = character:WaitForChild("HumanoidRootPart")
+	local humanoid = character:FindFirstChild("Humanoid")
+	local animator = humanoid:FindFirstChild("Animator")
+	local animation = Instance.new("Animation")
+	animation.AnimationId = FartAnimations.SpiritFart
+	local animationTrack = animator:LoadAnimation(animation)
+	animationTrack:Play()
+
+	local function AnchorCharacterParts(anchor)
+		for _, part in pairs(character:GetChildren()) do
+			if part:IsA("BasePart") then
+				part.Anchored = anchor
+			end
+		end
+	end
+
+	animationTrack:GetMarkerReachedSignal("Hold"):Connect(function()
+		local starttime = tick()
+		local chargetime = 10
+		animationTrack:AdjustSpeed(0)
+		local spiritEnergy = game.ReplicatedStorage:WaitForChild("SpiritEnergy"):Clone()
+		local spiritBomb = game.ReplicatedStorage:WaitForChild("SpiritBomb"):Clone()
+		spiritBomb.Position = character.PrimaryPart.Position + Vector3.new(0, 30, 0)
+		spiritBomb.Parent = game.Workspace
+		spiritEnergy.Parent = hrp
+
+		local emitter = spiritBomb:WaitForChild("Attachment"):WaitForChild("ParticleEmitter")
+		local numStars = 10 -- Number of stars
+		local radius = 5 -- Radius of the circular path
+		local speed = 1 -- Speed of revolution (radians per second)
+		local center = hrp.Position -- Center point of the circular path
+
+		-- Create stars and store them in a table
+		local stars = {}
+		for i = 1, numStars do
+			local star = Instance.new("Part")
+			star.Shape = Enum.PartType.Ball
+			star.Size = Vector3.new(.5, .5, .5) -- Size of the star
+			star.Anchored = true
+			star.CanCollide = false
+			star.BrickColor = BrickColor.new(Color3.fromRGB(70, 255, 203)) -- Random color for each star
+			star.Material = Enum.Material.Neon
+			star.Parent = game.Workspace
+			table.insert(stars, star)
+		end
+
+		-- Function to update the positions of stars
+		local function updateStars()
+			local angle = tick() * speed -- Calculate the angle based on time
+			for i, star in ipairs(stars) do
+				local starAngle = angle + (2 * math.pi / numStars) * i -- Distribute stars evenly
+				local x = center.X + radius * math.cos(starAngle)
+				local z = center.Z + radius * math.sin(starAngle)
+				star.Position = Vector3.new(x, center.Y, z)
+			end
+		end
+
+		-- Update positions every frame
+		local starUpdateConnection = game:GetService("RunService").Heartbeat:Connect(updateStars)
+
+		local charge = true
+		activeCharges[player] = spiritBomb
+		local currtime = tick()
+
+		spawn(function()
+			while charge and (currtime - starttime) < chargetime do
+				spiritBomb.Size = spiritBomb.Size + Vector3.new(.3, .3, .3)
+
+				-- Update emitter size
+				local currentSize = emitter.Size
+				local newKeypoints = {}
+				for _, keypoint in ipairs(currentSize.Keypoints) do
+					table.insert(newKeypoints, NumberSequenceKeypoint.new(keypoint.Time, keypoint.Value + .3))
+				end
+				emitter.Size = NumberSequence.new(newKeypoints)
+
+				currtime = tick()
+				wait(.1)
+			end
+		end)
+
+		AnchorCharacterParts(true)
+		FartAnimationUp.OnServerEvent:Connect(function(player, direction, mouselo, FartAnimation2)
+			if FartAnimation2 ~= FartAnimations.SpiritFart then return end
+			charge = false -- Stop growing the spirit bomb
+			local spiritBomb = activeCharges[player]
+			if spiritBomb then
+				print(emitter.Size)
+				spiritBomb.Anchored = false
+				local bodyVelocity = Instance.new("BodyVelocity", spiritBomb)
+				bodyVelocity.Velocity = CFrame.new(hrp.Position, mouselo).LookVector * 50 -- Adjust the speed as needed
+				bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+				spiritEnergy:Destroy()
+
+				-- Remove the spirit bomb after some time
+				spiritBomb.Touched:Connect(function(hit)
+					if hit.Parent.Name == player.Name then
+						return
+					else
+						spiritBomb:FindFirstChild("BodyVelocity"):Destroy()
+						spiritBomb.Anchored = true
+						local spiritSize = spiritBomb.Size
+						local spirittween = TS:Create(spiritBomb, TI, {Size = Vector3.new(1,1,1)})
+						spirittween:Play()
+						spirittween.Completed:Wait()
+						
+						local spirithb = Instance.new("Part", game.Workspace)
+						spirithb.Shape = Enum.PartType.Ball
+						spirithb.Size = spiritBomb.Size
+						spirithb.Position = spiritBomb.Position
+						spirithb.Anchored = true
+						spirithb.CanCollide = false
+						spirithb.Transparency = 1
+						
+						spiritBomb.Transparency = .1
+						wait(1.5)
+						local spirittween2 = TS:Create(spiritBomb, TI2, {Size = Vector3.new(spiritSize.X * 5,spiritSize.Y * 5,spiritSize.Z * 5)})
+						local hbtween = TS:Create(spirithb, TI2, {Size = Vector3.new(spiritSize.X * 5,spiritSize.Y * 5,spiritSize.Z * 5)})
+						hbtween:Play()
+						spirittween2:Play()
+						spirithb.Touched:Connect(function(hit)
+							if hit.Parent.Name == player.Name then
+								return
+							else
+								hit.Parent.Humanoid:TakeDamage(10) -- Adjust the damage as needed
+								spirithb:Destroy()
+							end
+						end)
+						-- code damage here
+						spirittween2.Completed:Wait()
+						wait(1.3)
+						local spirittween3 = TS:Create(spiritBomb, TI3, {Size = Vector3.new(.1,.1,.1)})
+						spirithb.CanTouch = false
+						spirithb:Destroy()
+						spirittween3:Play()
+						spirittween3.Completed:Wait()
+						
+						spiritBomb:Destroy()
+					end
+				end)
+
+				activeCharges[player] = nil
+
+				AnchorCharacterParts(false)
+				starUpdateConnection:Disconnect()
+
+				-- Destroy all stars
+				for _, star in ipairs(stars) do
+					star:Destroy()
+				end
+			end
+		end)
+	end)
+end)
