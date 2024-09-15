@@ -1,0 +1,47 @@
+local DeathScreen = game.ReplicatedStorage:WaitForChild("DeathScreen")
+local TS = game:GetService("TweenService")
+local player = game.Players.LocalPlayer
+local jointimes = 1
+local TI = TweenInfo.new(2, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, 0)
+
+local function Death()
+	local DeathBackground = player.PlayerGui:WaitForChild("DeathScreen"):WaitForChild("ScreenGui"):WaitForChild("Deathbackground")
+	local DeathText = player.PlayerGui:WaitForChild("DeathScreen"):WaitForChild("ScreenGui"):WaitForChild("DeathText")
+	DeathBackground.Visible = true
+	DeathText.Visible = true
+	
+	local backgorundTween = TS:Create(DeathBackground, TI, {BackgroundTransparency = .35})
+	local textTween = TS:Create(DeathText, TI, {TextTransparency = 0})
+	backgorundTween:Play()
+	textTween:Play()
+	
+	local screenGui = player.PlayerGui:WaitForChild("DeathScreen"):WaitForChild("ScreenGui") -- Create a new ScreenGui
+	for i = 1, 100, 1 do
+		local textLabel = player.PlayerGui:WaitForChild("DeathScreen"):WaitForChild("ScreenGui"):WaitForChild("LaughingEmoji"):Clone() -- Create a new TextLabel
+		textLabel.Parent = screenGui
+		-- Get the screen size
+		local screenSize = screenGui.AbsoluteSize
+
+		-- Generate random position
+		local randomX = math.random(0, screenSize.X - textLabel.Size.X.Offset)
+		local randomY = math.random(0, screenSize.Y - textLabel.Size.Y.Offset)
+
+		-- Set the TextLabel's position
+		textLabel.Position = UDim2.new(0, randomX, 0, randomY)
+		textLabel.Visible = true
+		wait(.0001)
+	end
+	
+	
+		
+end
+
+DeathScreen.OnClientEvent:Connect(Death)
+
+player.CharacterAdded:Connect(function(character)
+	if jointimes > 1 then
+		player.PlayerGui:WaitForChild("menu"):WaitForChild('ScreenGui'):WaitForChild("openMenuButton").Visible = true
+		player.PlayerGui:WaitForChild("Mastery"):WaitForChild('ScreenGui'):WaitForChild('openMasteryButton').Visible = true
+	end	
+	jointimes += 1	
+end)
