@@ -1,0 +1,80 @@
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local lastUsedtime = 0
+local player = game.Players.LocalPlayer
+local FartAnimationDown = game.ReplicatedStorage:WaitForChild("FartAnimationDown")
+local FartAnimationUp = game.ReplicatedStorage:WaitForChild("FartAnimationUp")
+local M1downbool = false
+local character = player.Character or player.CharacterAdded:Wait()
+local mouse = player:GetMouse()
+local updateCharacterConnection
+local humanoid = character:FindFirstChild("Humanoid")
+local playbutton = player.PlayerGui:WaitForChild("OnJoinLoadUp"):WaitForChild("JoinGui"):WaitForChild("playButton")
+local blackframe = player.PlayerGui:WaitForChild("OnJoinLoadUp"):WaitForChild("JoinGui"):WaitForChild("blackFrame")
+
+local function UpdateCharacter()
+	local MousePos = mouse.Hit.p
+	local characterPosition = character.PrimaryPart.Position
+
+	local lookVector = (MousePos - characterPosition).unit
+	local newCFrame = CFrame.lookAt(characterPosition, Vector3.new(mouse.Hit.Position.X, character:WaitForChild("HumanoidRootPart").Position.Y, mouse.hit.Position.Z))
+
+	character:SetPrimaryPartCFrame(newCFrame)
+
+	return newCFrame
+end
+
+local function M1Down(input, gameProcessed)
+	local inArena = player:WaitForChild("StatusFolder"):WaitForChild("inArena").Value
+	if not inArena then return end
+	if blackframe.Visible == true then
+		wait(1.5)
+	end
+	if playbutton.Visible == true then return end
+	if input.UserInputType == Enum.UserInputType.MouseButton1 and not gameProcessed then
+		local currtime = tick()
+		if currtime - lastUsedtime >= 5 then
+			M1downbool = true
+			print("M1Down")
+			local FartAnimation = player:WaitForChild("FartStorage"):WaitForChild("FartAnimation").Value
+			print(FartAnimation)
+			humanoid.JumpHeight = 0
+			FartAnimationDown:FireServer(FartAnimation)
+			--lastUsedtime = currtime
+			updateCharacterConnection = RunService.RenderStepped:Connect(UpdateCharacter)
+		end
+	end
+end
+
+local function M1Up(input, gameProcessed)
+	if M1downbool == false then
+		return
+	end
+	if input.UserInputType == Enum.UserInputType.MouseButton1 and not gameProcessed then
+		print("M1Up")
+		local mouseLocation = UpdateCharacter()
+		local FartAnimation = player:WaitForChild("FartStorage"):WaitForChild("FartAnimation").Value
+		FartAnimationUp:FireServer(mouse.Hit, mouse.Hit.p, FartAnimation)
+		lastUsedtime = tick()
+		M1downbool = false
+		humanoid.JumpHeight = 7.2
+		if updateCharacterConnection then
+			updateCharacterConnection:Disconnect()
+			updateCharacterConnection = nil
+		end
+	end
+end
+
+-- Reconnect the character and related events when the player respawns
+player.CharacterAdded:Connect(function(newCharacter)
+	character = newCharacter
+	humanoid = character:WaitForChild("Humanoid")
+
+	-- Reconnect the UpdateCharacter function to the new character
+	if M1downbool then
+		updateCharacterConnection = RunService.RenderStepped:Connect(UpdateCharacter)
+	end
+end)
+
+UIS.InputBegan:Connect(M1Down)
+UIS.InputEnded:Connect(M1Up)
