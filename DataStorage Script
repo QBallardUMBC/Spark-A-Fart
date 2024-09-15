@@ -1,0 +1,21 @@
+local DataStoreService = game:GetService("DataStoreService")
+local DataStore = DataStoreService:GetDataStore("MyDataStore")
+
+game.Players.PlayerRemoving:Connect(function(player)
+	
+	local key = player.UserId
+	local data = {
+		Farts = player.leaderstats.Farts.Value,
+		FartAnimation = player.FartStorage.FartAnimation.Value
+	}
+
+	local success, err = pcall(function()
+		DataStore:SetAsync(key, data)
+	end)
+	if success then
+		print("Data successfully saved!")
+	else
+		print("There was an error while saving the data")
+		warn(err)
+	end
+end)
