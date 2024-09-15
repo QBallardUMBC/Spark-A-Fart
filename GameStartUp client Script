@@ -1,0 +1,87 @@
+local OnJoin = game.ReplicatedStorage:WaitForChild("OnJoin") -- Remote Event
+
+local player = game.Players.LocalPlayer
+
+OnJoin.OnClientEvent:Connect(function()
+	local TweenService = game:GetService("TweenService") -- TweenService
+	
+	-- Tween Infos
+	local TweenInfo1 = TweenInfo.new(2, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out, 0, false, 0)
+	local TweenInfo2 = TweenInfo.new(3, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out, 0, false, 0)
+	local TweenInfo3 = TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, 0)
+
+	-- Cameras in Workspace
+	local Cameras = game.Workspace:WaitForChild("OnJoinCams")
+	local Cam1 = Cameras:WaitForChild("Cam1")
+	local Cam2 = Cameras:WaitForChild("Cam2")
+
+	-- PlayerCam
+	local playerCam =  game.Workspace.CurrentCamera
+	playerCam.CameraType = Enum.CameraType.Scriptable -- player cam is controlled by the script
+	playerCam.CFrame = Cam1.CFrame -- Assigns Camera to Cam1
+
+	-- Reference to Blackframe and playbutton
+	local blackFrame = script.Parent:WaitForChild("blackFrame")
+	local playButton = script.Parent:WaitForChild("playButton")
+	local playButtonBorder = playButton.UIStroke
+
+	blackFrame.Visible = true -- black frame is now visible
+
+	task.wait(1)
+	
+	-- Creates tweens on blackframe and player cam
+	local blackFrameTween = TweenService:Create(blackFrame, TweenInfo1, {BackgroundTransparency = 1})
+	local playerCamTween = TweenService:Create(playerCam, TweenInfo2, {CFrame = Cam2.CFrame})
+	
+	--Runs Tweens on black frame and player cam
+	blackFrameTween:Play()
+	playerCamTween:Play()
+	
+	playerCamTween.Completed:Wait() -- Pauses script until tween is finished
+	
+	playButton.Visible = true -- turns on playbutton
+	
+	-- Creates and runs playbutton tweens
+	local playButtonTween = TweenService:Create(playButton, TweenInfo1, {TextTransparency = 0})
+	local playButtonBGTween = TweenService:Create(playButton, TweenInfo1, {BackgroundTransparency = 0})
+	local playButtonBorderTween = TweenService:Create(playButtonBorder, TweenInfo1, {Transparency = 0})
+	playButtonTween:Play()
+	playButtonBGTween:Play()
+	playButtonBorderTween:Play()
+	
+	playButtonTween.Completed:Wait()
+	
+	
+	
+	local function PlayPressed()
+		-- Black frame and playbutton tweens
+		local blackFrameTween2 = TweenService:Create(blackFrame, TweenInfo3, {BackgroundTransparency = 0})
+		local playButtonTween2 = TweenService:Create(playButton, TweenInfo3, {TextTransparency = 1})
+		local playButtonBGTween2 = TweenService:Create(playButton, TweenInfo3, {BackgroundTransparency = 1})
+		local playButtonBorderTween2 = TweenService:Create(playButtonBorder, TweenInfo3, {Transparency = 1})
+
+		
+		-- Runs Tweens
+		blackFrameTween2:Play()
+		playButtonTween2:Play()
+		playButtonBGTween2:Play()
+		playButtonBorderTween2:Play()
+		
+		blackFrameTween2.Completed:Wait() -- Pauses script until tween is finished
+		playButton.Visible = false -- playbutton isnt visible
+		
+		player.PlayerGui:WaitForChild("menu"):WaitForChild('ScreenGui'):WaitForChild("openMenuButton").Visible = true
+		player.PlayerGui:WaitForChild("Mastery"):WaitForChild('ScreenGui'):WaitForChild('openMasteryButton').Visible = true
+		
+		-- Player cam is now controlled by player
+		playerCam.CameraType = Enum.CameraType.Custom
+		
+		-- Creates tween for blackframe and runs it
+		local blackFrameTween3 = TweenService:Create(blackFrame, TweenInfo3, {BackgroundTransparency = 1})
+		
+		blackFrameTween3:Play()
+		
+	end
+	
+	playButton.MouseButton1Click:Connect(PlayPressed) -- Activates Play pressed function when playbutton is clicked
+end)
